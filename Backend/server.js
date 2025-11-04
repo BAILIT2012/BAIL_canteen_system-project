@@ -48,7 +48,7 @@ app.get("/get-employee/:code", (req, res) => {
 });
 
 // ✅ Meal submit route
-app.post("/submit-meal", (req, res) => {
+app.post("/canteen/submit-meal", (req, res) => {
   const {
     employee_code,
     employee_name,
@@ -137,6 +137,23 @@ app.get("/meal-status/:employee_code", (req, res) => {
     res.json(results[0]);
   });
 });
+
+
+// ✅ Yeh Canteen System (server.js, port 8281) me likho
+app.get("/get-wallet/:code", async (req, res) => {
+  const code = req.params.code;
+  try {
+    const response = await fetch(`http://localhost:8081/api/wallet/${code}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error("Error fetching wallet from employee system:", err);
+    res.status(500).json({ error: "Failed to fetch wallet" });
+  }
+});
+
+
+
 
 
 
