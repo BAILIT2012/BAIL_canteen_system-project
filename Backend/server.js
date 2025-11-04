@@ -47,9 +47,9 @@ app.get("/get-employee/:code", (req, res) => {
   );
 });
 
-// ✅ Meal submit route
+// ✅ Meal submit route (Fixed version)
 app.post("/canteen/submit-meal", (req, res) => {
-  const {
+  let {
     employee_code,
     employee_name,
     employee_department,
@@ -62,42 +62,81 @@ app.post("/canteen/submit-meal", (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  // ✅ Normalize meal_type (convert "Breakfast" → "breakfast")
+  meal_type = meal_type.toLowerCase();
+
   const token_number = Math.floor(100000 + Math.random() * 900000);
 
-  const sql = `
-    INSERT INTO canteen_system_data 
-    (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+  // ✅ Fetch wallet balance before insert
+  const getWalletSQL = `SELECT * FROM employee_wallet WHERE employee_code = ?`;
+  db.query(getWalletSQL, [employee_code], (err, walletResult) => {
+    if (err) return res.status(500).json({ error: err });
+    if (walletResult.length === 0)
+      return res.status(404).json({ message: "Wallet not found" });
 
-  db.query(
-    sql,
-    [
-      employee_code,
-      employee_name,
-      employee_department,
-      employee_designation,
-      meal_type,
-      quantity,
-      token_number,
-    ],
-    (err, result) => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res
-            .status(400)
-            .json({ message: "❌ This meal has already been taken today." });
-        }
-        return res.status(500).json({ error: err });
-      }
-      res.json({ // chrome console show data in json format
-        message: "✅ Meal recorded successfully",
-        token_number,
-        order_time: new Date().toISOString(),  
-      });
+    const wallet = walletResult[0];
+
+    let breakfast = wallet.breakfast_credits;
+    let lunchDinner = wallet.lunch_dinner_credits;
+
+    // ✅ Check balance & deduct accordingly
+    if (meal_type === "breakfast") {
+      if (breakfast <= 0)
+        return res.status(400).json({ message: "Insufficient breakfast credits" });
+      breakfast -= 1;
+    } else if (meal_type === "lunch" || meal_type === "dinner") {
+      if (lunchDinner <= 0)
+        return res.status(400).json({ message: "Insufficient lunch/dinner credits" });
+      lunchDinner -= 1;
     }
-  );
+
+    // ✅ Update wallet
+    const updateWalletSQL = `
+      UPDATE employee_wallet
+      SET breakfast_credits = ?, lunch_dinner_credits = ?, updated_at = NOW()
+      WHERE employee_code = ?
+    `;
+    db.query(updateWalletSQL, [breakfast, lunchDinner, employee_code], (err2) => {
+      if (err2) return res.status(500).json({ error: err2 });
+
+      // ✅ Insert meal record after wallet deduction
+      const insertMealSQL = `
+        INSERT INTO canteen_system_data 
+        (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+      db.query(
+        insertMealSQL,
+        [
+          employee_code,
+          employee_name,
+          employee_department,
+          employee_designation,
+          meal_type,
+          quantity,
+          token_number,
+        ],
+        (err3) => {
+          if (err3) {
+            if (err3.code === "ER_DUP_ENTRY") {
+              return res.status(400).json({
+                message: "❌ This meal has already been taken today.",
+              });
+            }
+            return res.status(500).json({ error: err3 });
+          }
+
+          res.json({
+            message: "✅ Meal recorded successfully",
+            token_number,
+            order_time: new Date().toISOString(),
+          });
+        }
+      );
+    });
+  });
 });
+
 
 //Meal Status API
 app.get("/get-meal-status", (req, res) => {

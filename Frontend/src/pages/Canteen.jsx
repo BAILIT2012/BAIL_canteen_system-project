@@ -48,7 +48,7 @@ function Canteen() {
 
     if (hour >= 7 && hour < 10.5) setAvailableMeal("Breakfast");
     else if (hour >= 11 && hour < 16) setAvailableMeal("Lunch");
-    else if (hour >= 17 && hour < 22) setAvailableMeal("Dinner");
+    else if (hour >= 16 && hour < 22) setAvailableMeal("Dinner");
     else setAvailableMeal("None");
   }, []);
 
