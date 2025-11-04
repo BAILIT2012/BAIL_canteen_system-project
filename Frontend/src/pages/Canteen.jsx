@@ -47,7 +47,7 @@ function Canteen() {
     const hour = now.getHours();
 
     if (hour >= 7 && hour < 10.5) setAvailableMeal("Breakfast");
-    else if (hour >= 11 && hour < 15) setAvailableMeal("Lunch");
+    else if (hour >= 11 && hour < 16) setAvailableMeal("Lunch");
     else if (hour >= 17 && hour < 22) setAvailableMeal("Dinner");
     else setAvailableMeal("None");
   }, []);

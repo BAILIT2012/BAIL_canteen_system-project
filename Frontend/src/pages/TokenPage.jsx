@@ -28,7 +28,7 @@ function TokenPage() {
           <p><strong>Order Time:</strong> {new Date(orderTime).toLocaleString()}</p>
         </div>
 
-        <Link to="/meal_status">
+        <Link to="/get-meal-status">
           <button className="mt-6 btn btn-success bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             Go to Meal Status
           </button>
