@@ -59,18 +59,18 @@ function Canteen() {
   }
 
   // 💰 Define meal cost (you can adjust later)
-  const mealCost =
-    selectedMeal === "Breakfast"
-      ? 1
-      : selectedMeal === "Lunch" || selectedMeal === "Dinner"
-      ? 2
-      : 1;
+  // const mealCost =
+  //   selectedMeal === "Breakfast"
+  //     ? 1
+  //     : selectedMeal === "Lunch" || selectedMeal === "Dinner"
+  //     ? 2
+  //     : 1;
 
   // 🧠 Check if wallet has enough balance before submitting
   if (
-    (selectedMeal === "Breakfast" && wallet.breakfast_credits < mealCost) ||
+    (selectedMeal === "Breakfast" && wallet.breakfast_credits < 1) ||
     ((selectedMeal === "Lunch" || selectedMeal === "Dinner") &&
-      wallet.lunch_dinner_credits < mealCost)
+      wallet.lunch_dinner_credits < 1)
   ) {
     setMessage("❌ Insufficient credits in wallet!");
     return;
@@ -86,7 +86,7 @@ function Canteen() {
         employee_department: employee.employee_department,
         employee_designation: employee.employee_designation,
         meal_type: selectedMeal,
-        amount: mealCost,
+        amount_deducted: 1, //har meal ke liya only one credit use hoga
         quantity: Number(quantity),
       }),
     });
@@ -104,12 +104,12 @@ function Canteen() {
     if (selectedMeal === "Breakfast") {
       setWallet((prev) => ({
         ...prev,
-        breakfast_credits: prev.breakfast_credits - mealCost,
+        breakfast_credits: prev.breakfast_credits - 1,
       }));
     } else if (selectedMeal === "Lunch" || selectedMeal === "Dinner") {
       setWallet((prev) => ({
         ...prev,
-        lunch_dinner_credits: prev.lunch_dinner_credits - mealCost,
+        lunch_dinner_credits: prev.lunch_dinner_credits - 1,
       }));
     }
 

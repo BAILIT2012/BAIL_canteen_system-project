@@ -49,7 +49,7 @@ app.get("/get-employee/:code", (req, res) => {
 
 // ✅ Meal submit route (Fixed version)
 app.post("/canteen/submit-meal", (req, res) => {
-  let {
+  const {
     employee_code,
     employee_name,
     employee_department,
@@ -62,78 +62,87 @@ app.post("/canteen/submit-meal", (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // ✅ Normalize meal_type (convert "Breakfast" → "breakfast")
-  meal_type = meal_type.toLowerCase();
+  // 🔹 Step 1: Fetch wallet first
+  const walletQuery = `
+    SELECT breakfast_credits, lunch_dinner_credits 
+    FROM employee_wallet 
+    WHERE employee_code = ?
+  `;
 
-  const token_number = Math.floor(100000 + Math.random() * 900000);
-
-  // ✅ Fetch wallet balance before insert
-  const getWalletSQL = `SELECT * FROM employee_wallet WHERE employee_code = ?`;
-  db.query(getWalletSQL, [employee_code], (err, walletResult) => {
+  db.query(walletQuery, [employee_code], (err, walletResults) => {
     if (err) return res.status(500).json({ error: err });
-    if (walletResult.length === 0)
+
+    if (walletResults.length === 0)
       return res.status(404).json({ message: "Wallet not found" });
 
-    const wallet = walletResult[0];
+    const wallet = walletResults[0];
 
-    let breakfast = wallet.breakfast_credits;
-    let lunchDinner = wallet.lunch_dinner_credits;
+    // 🔹 Step 2: Deduct credits based on meal type
+    if (meal_type === "Breakfast") {
+      if (wallet.breakfast_credits < 1)
+        return res
+          .status(400)
+          .json({ message: "❌ Insufficient breakfast credits" });
 
-    // ✅ Check balance & deduct accordingly
-    if (meal_type === "breakfast") {
-      if (breakfast <= 0)
-        return res.status(400).json({ message: "Insufficient breakfast credits" });
-      breakfast -= 1;
-    } else if (meal_type === "lunch" || meal_type === "dinner") {
-      if (lunchDinner <= 0)
-        return res.status(400).json({ message: "Insufficient lunch/dinner credits" });
-      lunchDinner -= 1;
+      wallet.breakfast_credits -= 1;
+    } else if (meal_type === "Lunch" || meal_type === "Dinner") {
+      if (wallet.lunch_dinner_credits < 1)
+        return res
+          .status(400)
+          .json({ message: "❌ Insufficient lunch/dinner credits" });
+
+      wallet.lunch_dinner_credits -= 1;
     }
 
-    // ✅ Update wallet
-    const updateWalletSQL = `
-      UPDATE employee_wallet
-      SET breakfast_credits = ?, lunch_dinner_credits = ?, updated_at = NOW()
+    // 🔹 Step 3: Update wallet
+    const updateWalletQuery = `
+      UPDATE employee_wallet 
+      SET breakfast_credits = ?, lunch_dinner_credits = ?
       WHERE employee_code = ?
     `;
-    db.query(updateWalletSQL, [breakfast, lunchDinner, employee_code], (err2) => {
-      if (err2) return res.status(500).json({ error: err2 });
 
-      // ✅ Insert meal record after wallet deduction
-      const insertMealSQL = `
-        INSERT INTO canteen_system_data 
-        (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
-      db.query(
-        insertMealSQL,
-        [
-          employee_code,
-          employee_name,
-          employee_department,
-          employee_designation,
-          meal_type,
-          quantity,
-          token_number,
-        ],
-        (err3) => {
-          if (err3) {
-            if (err3.code === "ER_DUP_ENTRY") {
-              return res.status(400).json({
-                message: "❌ This meal has already been taken today.",
-              });
-            }
-            return res.status(500).json({ error: err3 });
-          }
+    db.query(
+      updateWalletQuery,
+      [
+        wallet.breakfast_credits,
+        wallet.lunch_dinner_credits,
+        employee_code,
+      ],
+      (err2) => {
+        if (err2) return res.status(500).json({ error: err2 });
 
-          res.json({
-            message: "✅ Meal recorded successfully",
+        // 🔹 Step 4: Insert meal record
+        const token_number = Math.floor(100000 + Math.random() * 900000);
+        const insertMealQuery = `
+          INSERT INTO canteen_system_data 
+          (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number, amount_deducted)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        db.query(
+          insertMealQuery,
+          [
+            employee_code,
+            employee_name,
+            employee_department,
+            employee_designation,
+            meal_type,
+            quantity,
             token_number,
-            order_time: new Date().toISOString(),
-          });
-        }
-      );
-    });
+            1, // ek credit use hua
+          ],
+          (err3) => {
+            if (err3) return res.status(500).json({ error: err3 });
+
+            res.json({
+              message: "✅ Meal recorded successfully",
+              token_number,
+              order_time: new Date().toISOString(),
+            });
+          }
+        );
+      }
+    );
   });
 });
 
