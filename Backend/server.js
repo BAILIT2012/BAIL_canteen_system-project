@@ -153,6 +153,24 @@ app.get("/get-wallet/:code", async (req, res) => {
 });
 
 
+// ✅ Token History API (for employee system)
+app.get("/token-history", (req, res) => {
+  const query = "SELECT * FROM canteen_system_data ORDER BY order_time DESC";
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching token history:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "No token history found" });
+    }
+
+    console.log("✅ Token history fetched:", results.length, "records");
+    res.json(results);
+  });
+});
 
 
 

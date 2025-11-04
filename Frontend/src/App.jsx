@@ -5,6 +5,7 @@ import Canteen from "./pages/Canteen";
 import TokenPage from "./pages/TokenPage";
 import MealStatus from "./pages/MealStatus";
 
+
 function App() {
   return (
     <Routes>
@@ -12,7 +13,7 @@ function App() {
       <Route path="/canteen-scanner" element={<CanteenScanner/>} />
       <Route path="/canteen" element={<Canteen/>} />
       <Route path="/token" element={<TokenPage/>} />
-      <Route path="/meal_status" element={<MealStatus/>} />
+      <Route path="/get-meal-status" element={<MealStatus/>} />
 
     </Routes>
   );

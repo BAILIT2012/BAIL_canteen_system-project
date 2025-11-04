@@ -4,7 +4,7 @@ import "./css/Home.css";
 
 const cards = [
   { title: "Scan QR Code", desc: "Scan employee QR to view details and process meals.", link: "/canteen-scanner", button: "Scan QR" },
-  { title: "Meal Status", desc: "Check today's meal booking and status updates.", link: "/meal_status", button: "Check Status" },
+  { title: "Meal Status", desc: "Check today's meal booking and status updates.", link: "/get-meal-status", button: "Check Status" },
 ];
 
 const Home = () => {
