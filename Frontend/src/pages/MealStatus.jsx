@@ -5,21 +5,14 @@ function MealStatus() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const employeeCode = localStorage.getItem("employee_code");
-    console.log("👤 Employee Code from localStorage:", employeeCode);
-
-    if (!employeeCode) {
-      setError("⚠️ Employee code not found. Please scan your QR again.");
-      return;
-    }
-
-    fetch(`http://localhost:8281/meal-status/${employeeCode}`)
+    // 👇 Ab sabhi employees ka meal data fetch hoga
+    fetch("http://localhost:8281/get-meal-status")
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();
       })
       .then((data) => {
-        console.log("🍽️ Meal data received:", data);
+        console.log("🍽️ All meal data received:", data);
         if (Array.isArray(data) && data.length > 0) {
           setMeals(data);
         } else {
@@ -37,7 +30,7 @@ function MealStatus() {
   if (meals.length === 0) return <p className="mt-5 text-center">Loading meal data...</p>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-white rounded-xl shadow-md mt-10">
+    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-md mt-10">
       <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">
         🍴 Canteen Meal Transaction History
       </h2>
