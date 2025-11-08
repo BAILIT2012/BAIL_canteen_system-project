@@ -27,7 +27,7 @@ function Canteen() {
             localStorage.setItem("employee_code", data.employee_code);
             console.log("Employee code saved", data.employee_code);
 
-            // 🟢 2. Fetch wallet data using employee_code (inside same success block)
+            // 🟢 2. Fetch wallet data using employee_code
             fetch(`http://localhost:8281/get-wallet/${data.employee_code}`)
               .then((res) => res.json())
               .then((walletData) => {
@@ -52,85 +52,79 @@ function Canteen() {
     else setAvailableMeal("None");
   }, []);
 
+  // ✅ Fixed version with proper error and success messages
   const handleSubmit = async () => {
-  if (!selectedMeal) {
-    setMessage("⚠️ Please select a meal.");
-    return;
-  }
-
-  // 💰 Define meal cost (you can adjust later)
-  // const mealCost =
-  //   selectedMeal === "Breakfast"
-  //     ? 1
-  //     : selectedMeal === "Lunch" || selectedMeal === "Dinner"
-  //     ? 2
-  //     : 1;
-
-  // 🧠 Check if wallet has enough balance before submitting
-  if (
-    (selectedMeal === "Breakfast" && wallet.breakfast_credits < 1) ||
-    ((selectedMeal === "Lunch" || selectedMeal === "Dinner") &&
-      wallet.lunch_dinner_credits < 1)
-  ) {
-    setMessage("❌ Insufficient credits in wallet!");
-    return;
-  }
-
-  try {
-    const res = await fetch("http://localhost:8281/canteen/submit-meal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employee_code: employee.employee_code,
-        employee_name: employee.employee_name,
-        employee_department: employee.employee_department,
-        employee_designation: employee.employee_designation,
-        meal_type: selectedMeal,
-        amount_deducted: 1, //har meal ke liya only one credit use hoga
-        quantity: Number(quantity),
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Transaction failed! Insufficient balance.");
+    if (!selectedMeal) {
+      setMessage("⚠️ Please select a meal.");
       return;
     }
 
-    console.log("Meal response:", data);
-
-    // ✅ Update frontend wallet instantly after successful deduction
-    if (selectedMeal === "Breakfast") {
-      setWallet((prev) => ({
-        ...prev,
-        breakfast_credits: prev.breakfast_credits - 1,
-      }));
-    } else if (selectedMeal === "Lunch" || selectedMeal === "Dinner") {
-      setWallet((prev) => ({
-        ...prev,
-        lunch_dinner_credits: prev.lunch_dinner_credits - 1,
-      }));
+    // 🧠 Check if wallet has enough balance before submitting
+    if (
+      (selectedMeal === "Breakfast" && wallet.breakfast_credits < 1) ||
+      ((selectedMeal === "Lunch" || selectedMeal === "Dinner") &&
+        wallet.lunch_dinner_credits < 1)
+    ) {
+      setMessage("❌ Insufficient credits in wallet!");
+      return;
     }
 
-    alert("✅ Meal submitted successfully!");
+    try {
+      const res = await fetch("http://localhost:8281/canteen/submit-meal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employee_code: employee.employee_code,
+          employee_name: employee.employee_name,
+          employee_department: employee.employee_department,
+          employee_designation: employee.employee_designation,
+          meal_type: selectedMeal,
+          amount_deducted: 1, // har meal ke liye only one credit use hoga
+          quantity: Number(quantity),
+        }),
+      });
 
-    // ✅ Redirect to Token Page
-    navigate("/token", {
-      state: {
-        employee,
-        token: data.token_number,
-        orderTime: data.order_time,
-        meal_type: selectedMeal,
-        quantity,
-      },
-    });
-  } catch (error) {
-    console.error("Fetch error:", error);
-    alert("Something went wrong while submitting meal!");
-  }
-};
+      const data = await res.json();
+      console.log("🔍 Backend Response:", data);
 
+      if (!res.ok) {
+        // 👇 Show exact backend message if available
+        alert(data.message || data.error || "⚠️ Transaction failed!");
+        return;
+      }
+
+      console.log("Meal response:", data);
+
+      // ✅ Update frontend wallet instantly after successful deduction
+      if (selectedMeal === "Breakfast") {
+        setWallet((prev) => ({
+          ...prev,
+          breakfast_credits: prev.breakfast_credits - 1,
+        }));
+      } else if (selectedMeal === "Lunch" || selectedMeal === "Dinner") {
+        setWallet((prev) => ({
+          ...prev,
+          lunch_dinner_credits: prev.lunch_dinner_credits - 1,
+        }));
+      }
+
+      alert(data.message || "✅ Meal submitted successfully!");
+
+      // ✅ Redirect to Token Page
+      navigate("/token", {
+        state: {
+          employee,
+          token: data.token_number,
+          orderTime: data.order_time,
+          meal_type: selectedMeal,
+          quantity,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Fetch error:", error);
+      alert("Something went wrong while submitting meal!");
+    }
+  };
 
   if (!employee)
     return <p className="mt-5 text-center">Loading employee details...</p>;

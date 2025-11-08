@@ -62,90 +62,120 @@ app.post("/canteen/submit-meal", (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // 🔹 Step 1: Fetch wallet first
-  const walletQuery = `
-    SELECT breakfast_credits, lunch_dinner_credits 
-    FROM employee_wallet 
-    WHERE employee_code = ?
+  const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd format
+
+  // 🔹 Step 1: Check if the employee already took same meal today
+  const checkQuery = `
+    SELECT * FROM canteen_system_data
+    WHERE employee_code = ? AND meal_type = ? AND DATE(created_at) = ?
   `;
 
-  db.query(walletQuery, [employee_code], (err, walletResults) => {
-    if (err) return res.status(500).json({ error: err });
-
-    if (walletResults.length === 0)
-      return res.status(404).json({ message: "Wallet not found" });
-
-    const wallet = walletResults[0];
-
-    // 🔹 Step 2: Deduct credits based on meal type
-    if (meal_type === "Breakfast") {
-      if (wallet.breakfast_credits < 1)
-        return res
-          .status(400)
-          .json({ message: "❌ Insufficient breakfast credits" });
-
-      wallet.breakfast_credits -= 1;
-    } else if (meal_type === "Lunch" || meal_type === "Dinner") {
-      if (wallet.lunch_dinner_credits < 1)
-        return res
-          .status(400)
-          .json({ message: "❌ Insufficient lunch/dinner credits" });
-
-      wallet.lunch_dinner_credits -= 1;
+  db.query(checkQuery, [employee_code, meal_type, today], (err, results) => {
+    if (err) {
+      console.log("Error Meal Checking", err);
+      return res
+        .status(500)
+        .json({ error: "Server error while checking meal record" });
     }
 
-    // 🔹 Step 3: Update wallet
-    const updateWalletQuery = `
-      UPDATE employee_wallet 
-      SET breakfast_credits = ?, lunch_dinner_credits = ?
+    // ✅ If already took this meal — stop here
+    if (results.length > 0) {
+      return res.status(400).json({
+        message: `⚠️ You already took your ${meal_type} today.`,
+      });
+    }
+
+    // 🔹 Step 2: Fetch wallet
+    const walletQuery = `
+      SELECT breakfast_credits, lunch_dinner_credits 
+      FROM employee_wallet 
       WHERE employee_code = ?
     `;
 
-    db.query(
-      updateWalletQuery,
-      [
-        wallet.breakfast_credits,
-        wallet.lunch_dinner_credits,
-        employee_code,
-      ],
-      (err2) => {
-        if (err2) return res.status(500).json({ error: err2 });
+    db.query(walletQuery, [employee_code], (err, walletResults) => {
+      if (err)
+        return res.status(500).json({ error: "Error fetching wallet data" });
 
-        // 🔹 Step 4: Insert meal record
-        const token_number = Math.floor(100000 + Math.random() * 900000);
-        const insertMealQuery = `
-          INSERT INTO canteen_system_data 
-          (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number, amount_deducted)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+      if (walletResults.length === 0)
+        return res.status(404).json({ message: "Wallet not found" });
 
-        db.query(
-          insertMealQuery,
-          [
-            employee_code,
-            employee_name,
-            employee_department,
-            employee_designation,
-            meal_type,
-            quantity,
-            token_number,
-            1, // ek credit use hua
-          ],
-          (err3) => {
-            if (err3) return res.status(500).json({ error: err3 });
+      const wallet = walletResults[0];
 
-            res.json({
-              message: "✅ Meal recorded successfully",
-              token_number,
-              order_time: new Date().toISOString(),
-            });
-          }
-        );
+      // 🔹 Step 3: Deduct credits based on meal type
+      if (meal_type === "Breakfast") {
+        if (wallet.breakfast_credits < 1)
+          return res
+            .status(400)
+            .json({ message: "❌ Insufficient breakfast credits" });
+
+        wallet.breakfast_credits -= 1;
+      } else if (meal_type === "Lunch" || meal_type === "Dinner") {
+        if (wallet.lunch_dinner_credits < 1)
+          return res
+            .status(400)
+            .json({ message: "❌ Insufficient lunch/dinner credits" });
+
+        wallet.lunch_dinner_credits -= 1;
       }
-    );
+
+      // 🔹 Step 4: Update wallet
+      const updateWalletQuery = `
+        UPDATE employee_wallet 
+        SET breakfast_credits = ?, lunch_dinner_credits = ?
+        WHERE employee_code = ?
+      `;
+
+      db.query(
+        updateWalletQuery,
+        [
+          wallet.breakfast_credits,
+          wallet.lunch_dinner_credits,
+          employee_code,
+        ],
+        (err2) => {
+          if (err2)
+            return res
+              .status(500)
+              .json({ error: "Error updating wallet credits" });
+
+          // 🔹 Step 5: Insert meal record
+          const token_number = Math.floor(100000 + Math.random() * 900000);
+          const insertMealQuery = `
+            INSERT INTO canteen_system_data 
+            (employee_code, employee_name, employee_department, employee_designation, meal_type, quantity, token_number, amount_deducted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `;
+
+          db.query(
+            insertMealQuery,
+            [
+              employee_code,
+              employee_name,
+              employee_department,
+              employee_designation,
+              meal_type,
+              quantity,
+              token_number,
+              1, // one credit used
+            ],
+            (err3) => {
+              if (err3)
+                return res
+                  .status(500)
+                  .json({ error: "Error inserting meal record" });
+
+              res.json({
+                message: "✅ Meal recorded successfully",
+                token_number,
+                order_time: new Date().toISOString(),
+              });
+            }
+          );
+        }
+      );
+    });
   });
 });
-
 
 //Meal Status API
 app.get("/get-meal-status", (req, res) => {
