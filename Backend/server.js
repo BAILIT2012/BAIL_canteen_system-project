@@ -13,10 +13,10 @@ app.use(express.json());
 
 // ✅ MySQL Connection
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "1234", // apna actual MySQL password likho
-  database: "employee_auth",
+  host: "192.168.5.20",
+    user: "remote_user",
+    password: "Bail@123",
+    database: "employee_auth",
 });
 
 db.connect((err) => {
@@ -254,7 +254,7 @@ app.get("/token-history", (req, res) => {
 
 
 app.listen(8281, () => {
-  console.log("🚀 Server running on http://localhost:8281");
+  console.log("🚀 Server running on http://localhost:8281 & Connected to MySQL on local WiFi (192.168.5.20)");
 });
 
 

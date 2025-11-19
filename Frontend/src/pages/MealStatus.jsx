@@ -6,7 +6,7 @@ function MealStatus() {
 
   useEffect(() => {
     // 👇 Ab sabhi employees ka meal data fetch hoga
-    fetch("http://localhost:8281/get-meal-status")
+    fetch("http://192.168.5.20:8281/get-meal-status")
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();

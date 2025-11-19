@@ -17,7 +17,7 @@ function Canteen() {
 
     if (code) {
       // 🟢 1. Get employee basic info
-      fetch(`http://localhost:8281/get-employee/${code}`)
+       fetch(`http://192.168.5.20:8281/get-employee/${code}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Employee Data:", data);
@@ -28,7 +28,7 @@ function Canteen() {
             console.log("Employee code saved", data.employee_code);
 
             // 🟢 2. Fetch wallet data using employee_code
-            fetch(`http://localhost:8281/get-wallet/${data.employee_code}`)
+            fetch(`http://192.168.5.20:8281/get-wallet/${data.employee_code}`)
               .then((res) => res.json())
               .then((walletData) => {
                 console.log("Wallet Data:", walletData);
@@ -70,7 +70,7 @@ function Canteen() {
     }
 
     try {
-      const res = await fetch("http://localhost:8281/canteen/submit-meal", {
+      const res = await fetch("http://192.168.5.20:8281/canteen/submit-meal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
