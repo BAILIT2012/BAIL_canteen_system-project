@@ -232,21 +232,22 @@ app.get("/get-wallet/:code", async (req, res) => {
 
 
 // ✅ Token History API (for employee system)
-app.get("/token-history", (req, res) => {
-  const query = "SELECT * FROM canteen_system_data ORDER BY order_time DESC";
-  
-  db.query(query, (err, results) => {
+app.get("/api/token-history/:employee_code", (req, res) => {
+  const employeeCode = req.params.employee_code;
+
+  const query = `
+    SELECT *
+    FROM token_history
+    WHERE employee_code = ?
+    ORDER BY id DESC
+  `;
+
+  db.query(query, [employeeCode], (err, result) => {
     if (err) {
-      console.error("❌ Error fetching token history:", err);
-      return res.status(500).json({ message: "Server error" });
+      console.error("Error fetching token history:", err);
+      return res.status(500).json({ error: "Database error" });
     }
-
-    if (results.length === 0) {
-      return res.status(404).json({ message: "No token history found" });
-    }
-
-    console.log("✅ Token history fetched:", results.length, "records");
-    res.json(results);
+    res.json(result);
   });
 });
 
